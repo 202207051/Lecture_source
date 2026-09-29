@@ -4,19 +4,16 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.Win32.SafeHandles;
 using MySql.Data.MySqlClient;
-using Mysqlx.Connection;
 
 namespace project1
 {
     public partial class Form1 : Form
     {
+        // 연결 문자열을 클래스 상단 변수로 통일하여 관리
         private string connString = "Server=127.0.0.1;Port=3306;Database=sample;Uid=root;pwd=1234;";
 
         public Form1()
@@ -24,37 +21,38 @@ namespace project1
             InitializeComponent();
         }
 
-        private void groupBox2_Enter(object sender, EventArgs e)
-        {
+        private void groupBox2_Enter(object sender, EventArgs e) { }
+        private void textBox2_TextChanged(object sender, EventArgs e) { }
+        private void textBoxName_TextChanged(object sender, EventArgs e) { }
+        private void groupBox1_Enter(object sender, EventArgs e) { }
 
-        }
-
+        // 조회 (버튼 5번)
         private void button5_Click(object sender, EventArgs e)
         {
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 try
                 {
-                    if (textBoxName.Text == "" || textBoxPhone.Text == "")
-                    {
-                        MessageBox.Show("Please enter both name and phone number.");
-                        textBoxName.Focus();
-                        return;
-                    }
                     conn.Open();
-                    MessageBox.Show("Connection Successful");
-                    MySqlCommand cmd = new MySqlCommand("select * from Info_Table", conn);
-                    MySqlDataReader reader = cmd.ExecuteReader();
-                    listViewPhoneBook.Items.Clear();
-                    while (reader.Read())
+                    // 매번 조회할 때마다 "Connection Successful" 팝업이 뜨면 불편하므로 제거하거나 주석 처리하는 것이 좋습니다.
+                    // MessageBox.Show("Connection Successful");
+
+                    string sqlSelect = "SELECT * FROM Info_Table";
+                    using (MySqlCommand cmd = new MySqlCommand(sqlSelect, conn))
                     {
-                        ListViewItem item = new ListViewItem();
-                        item.Text = reader["id"].ToString();
-                        item.SubItems.Add(reader["name"].ToString());
-                        item.SubItems.Add(reader["phone"].ToString());
-                        listViewPhoneBook.Items.Add(item);
+                        using (MySqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            listViewPhoneBook.Items.Clear();
+                            while (reader.Read())
+                            {
+                                ListViewItem item = new ListViewItem();
+                                item.Text = reader["id"].ToString();
+                                item.SubItems.Add(reader["name"].ToString());
+                                item.SubItems.Add(reader["phone"].ToString());
+                                listViewPhoneBook.Items.Add(item);
+                            }
+                        }
                     }
-                    reader.Close();
                 }
                 catch (Exception ex)
                 {
@@ -63,23 +61,16 @@ namespace project1
             }
         }
 
-        private void textBox2_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void textBoxName_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void groupBox1_Enter(object sender, EventArgs e)
-        {
-
-        }
-
+        // 추가
         private void buttonInsert_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(textBoxName.Text) || string.IsNullOrWhiteSpace(textBoxPhone.Text))
+            {
+                MessageBox.Show("Please enter both name and phone number.");
+                textBoxName.Focus();
+                return;
+            }
+
             try
             {
                 string sqlInsert = "INSERT INTO Info_Table (name, phone) VALUES (@name, @phone)";
@@ -87,8 +78,6 @@ namespace project1
                 using (MySqlConnection conn = new MySqlConnection(connString))
                 {
                     conn.Open();
-                    MessageBox.Show("Connection Successful");
-
                     using (MySqlCommand cmd = new MySqlCommand(sqlInsert, conn))
                     {
                         cmd.Parameters.AddWithValue("@name", textBoxName.Text);
@@ -96,6 +85,11 @@ namespace project1
                         cmd.ExecuteNonQuery();
                     }
                 }
+                MessageBox.Show("Insert Successful");
+
+                // 입력 창 초기화 및 목록 새로고침
+                textBoxName.Clear();
+                textBoxPhone.Clear();
                 button5_Click(sender, e);
             }
             catch (Exception ex)
@@ -104,28 +98,28 @@ namespace project1
             }
         }
 
+        // 수정
         private void buttonUpdate_Click(object sender, EventArgs e)
         {
+            if (listViewPhoneBook.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Please select an item to update from the list.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(textBoxName.Text) || string.IsNullOrWhiteSpace(textBoxPhone.Text))
+            {
+                MessageBox.Show("Please enter both name and phone number.");
+                textBoxName.Focus();
+                return;
+            }
+
             try
             {
-                if (listViewPhoneBook.SelectedIndices.Count == 0)
-                {
-                    MessageBox.Show("Please select an item to update from the list.");
-                    return;
-                }
-
-                if (textBoxName.Text == "" || textBoxPhone.Text == "")
-                {
-                    MessageBox.Show("Please enter both name and phone number.");
-                    textBoxName.Focus();
-                    return;
-                }
-
                 using (MySqlConnection conn = new MySqlConnection(connString))
                 {
                     conn.Open();
-                    int pos = listViewPhoneBook.SelectedIndices[0];
-                    int index = int.Parse(listViewPhoneBook.Items[pos].Text);
+                    int index = int.Parse(listViewPhoneBook.SelectedItems[0].Text);
 
                     string sqlUpdate = "UPDATE Info_Table SET name=@name, phone=@phone WHERE id=@id";
 
@@ -140,6 +134,7 @@ namespace project1
                     }
                 }
 
+                // 목록 새로고침
                 button5_Click(sender, e);
             }
             catch (Exception ex)
@@ -148,29 +143,39 @@ namespace project1
             }
         }
 
+        // 삭제
         private void bottonDelete_Click(object sender, EventArgs e)
         {
-            using (MySqlConnection conn = new MySqlConnection("Server = 127.0.0.1; Port = 3306; Database = sample; Uid = root; pwd = 1234;"))
+            if (listViewPhoneBook.SelectedItems.Count == 0)
             {
-                try
-                {
-                    conn.Open();
-                    int pos = listViewPhoneBook.SelectedItems[0].Index;
-                    int index = int.Parse(listViewPhoneBook.Items[pos].Text);
-
-                    string sqlDelete = "DELETE FROM Info_Table WHERE id=@id";
-                    MySqlCommand cmd = new MySqlCommand(sqlDelete, conn);
-                    cmd.Parameters.AddWithValue("@id", index);
-                    cmd.ExecuteNonQuery();
-                    MessageBox.Show("Delete Successful");
-                }
-
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error: " + ex.Message);
-                }
+                MessageBox.Show("Please select an item to delete from the list.");
+                return;
             }
 
+            try
+            {
+                // 하드코딩된 연결 문자열 대신 공통 변수(connString) 사용
+                using (MySqlConnection conn = new MySqlConnection(connString))
+                {
+                    conn.Open();
+                    int index = int.Parse(listViewPhoneBook.SelectedItems[0].Text);
+
+                    string sqlDelete = "DELETE FROM Info_Table WHERE id=@id";
+                    using (MySqlCommand cmd = new MySqlCommand(sqlDelete, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", index);
+                        cmd.ExecuteNonQuery();
+                        MessageBox.Show("Delete Successful");
+                    }
+                }
+
+                // 삭제 후 목록 자동 갱신 추가
+                button5_Click(sender, e);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+            }
         }
     }
 }
