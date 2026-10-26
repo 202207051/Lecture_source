@@ -64,7 +64,7 @@ namespace project
         {
             Form4 form4 = new Form4(this, txtSearch);
             form4.Show();
-            form4.Hide();
+            this.Hide();
         }
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
