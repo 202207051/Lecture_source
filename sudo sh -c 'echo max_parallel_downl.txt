@@ -1,0 +1,1 @@
+sudo sh -c 'echo "max_parallel_downloads=10" >> /etc/dnf/dnf.conf';sudo sh -c 'echo "fastestmirror=True" >> /etc/dnf/dnf.conf';sudo sh -c 'echo "deltarpm=True" >> /etc/dnf/dnf.conf'
